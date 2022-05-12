@@ -3,7 +3,7 @@
 ## variant data field example
 
 ### [amax.token.hpp](./contracts/amax.token/include/amax.token/amax.token.hpp)
-- define variant type `token_info_ex`
+#### define variant type `token_info_ex`
 ```c++
    struct amax_token_info {
       eosio::name bank;
@@ -22,7 +22,7 @@
    typedef std::variant<amax_token_info, eth_token_info> token_info_ex;
 ```
 
-- add variant field `info_ex`
+#### add variant field `info_ex`
 ```c++
    struct [[eosio::table]] currency_stats {
       asset    supply;
@@ -35,7 +35,7 @@
 
 ```
 
-- add param `info_ex` to create() action
+#### add param `info_ex` to create() action
 ```c++
 [[eosio::action]]
 void create( const name&   issuer,
@@ -43,7 +43,7 @@ void create( const name&   issuer,
 ```
 
 ### [amax.token.cpp](./contracts/amax.token/src/amax.token.cpp)
-- implements in create() action
+#### implements in create() action
 ```c++
 void token::create( const name&   issuer,
                     const asset&  maximum_supply, const token_info_ex& info_ex )
