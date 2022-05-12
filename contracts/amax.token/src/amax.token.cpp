@@ -1,28 +1,24 @@
-#include <amax.token/amax.token.hpp>
 
-
-#define EMPTY_MACRO_FUNC(...)
-
-#define PP(prop) "," #prop ":", prop
-#define PP0(prop) #prop ":", prop
-#define PRINT_PROPERTIES(...) eosio::print("{", __VA_ARGS__, "}")
-
-#define CHECK(exp, msg) { if (!(exp)) eosio::check(false, msg); }
-
-#ifndef ASSERT
-    #define ASSERT(exp) CHECK(exp, #exp)
-#endif
-
-#ifdef PRINT_TRACE
-    #warning "PRINT_TRACE should be used for test!!!"
-    #define TRACE(...) print(__VA_ARGS__)
-#else
-    #define TRACE(...)
-#endif
-
-#define TRACE_L(...) TRACE(__VA_ARGS__, "\n")
+#include <variant>
 
 namespace eosio {
+   template<typename... Elements>
+   inline void print(const std::variant<Elements...>& v);
+}
+
+#include <amax.token/amax.token.hpp>
+
+namespace eosio {
+
+template<typename... Elements>
+inline void print(const std::variant<Elements...>& v) {
+   print("[", v.index(), ",");
+   std::visit( [](const auto& value) {
+         eosio::print(value);
+      }, v
+   );
+   print("]");
+}
 
 void token::create( const name&   issuer,
                     const asset&  maximum_supply, const token_info_ex& info_ex )
@@ -38,6 +34,8 @@ void token::create( const name&   issuer,
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
     check( existing == statstable.end(), "token with symbol already exists" );
+
+    print( PP0(info_ex) );
 
     statstable.emplace( get_self(), [&]( auto& s ) {
        s.supply.symbol = maximum_supply.symbol;
@@ -59,6 +57,8 @@ void token::issue( const name& to, const asset& quantity, const string& memo )
     check( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
     const auto& st = *existing;
     check( to == st.issuer, "tokens can only be issued to issuer account" );
+
+    print( PP0(st.info_ex) );
 
     require_auth( st.issuer );
     check( quantity.is_valid(), "invalid quantity" );

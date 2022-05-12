@@ -6,6 +6,26 @@
 #include <string>
 
 
+#define EMPTY_MACRO_FUNC(...)
+
+#define PP(prop) "," #prop ":", prop
+#define PP0(prop) #prop ":", prop
+#define PRINT_PROPERTIES(...) eosio::print("{", __VA_ARGS__, "}")
+
+#define CHECK(exp, msg) { if (!(exp)) eosio::check(false, msg); }
+
+#ifndef ASSERT
+    #define ASSERT(exp) CHECK(exp, #exp)
+#endif
+
+#ifdef PRINT_TRACE
+    #warning "PRINT_TRACE should be used for test!!!"
+    #define TRACE(...) print(__VA_ARGS__)
+#else
+    #define TRACE(...)
+#endif
+
+#define TRACE_L(...) TRACE(__VA_ARGS__, "\n")
 
 namespace eosio {
 
@@ -16,6 +36,10 @@ namespace eosio {
       eosio::name bank;
       std::string full_name;
 
+      void print() const {
+         eosio::print( PP0(bank), PP(full_name) );
+      }
+
       EOSLIB_SERIALIZE( amax_token_info,  (bank)(full_name)  )
    };
 
@@ -23,10 +47,36 @@ namespace eosio {
       std::string address;
       std::string full_name;
       std::string memo;
+
+      void print() const {
+         eosio::print( PP0(address), PP(full_name), PP(memo) );
+      }
+
       EOSLIB_SERIALIZE( eth_token_info,  (address)(full_name)(memo)  )
    };
 
-   typedef std::variant<amax_token_info, eth_token_info> token_info_ex;
+#ifdef BTC_TOKEN
+#warning "build with BTC_TOKEN"
+   struct btc_token_info {
+      std::string address;
+      std::string memo;
+      uint64_t    amount;
+
+      void print() const {
+         eosio::print( PP0(address), PP(memo), PP(amount) );
+      }
+
+      EOSLIB_SERIALIZE( btc_token_info,  (address)(memo)(amount)  )
+   };
+#endif
+
+   typedef std::variant<
+      amax_token_info,
+      eth_token_info
+#ifdef BTC_TOKEN
+      , btc_token_info
+#endif
+   > token_info_ex;
 
    /**
     * The `amax.token` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for AMAX based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `amax.token` contract instead of developing their own.
