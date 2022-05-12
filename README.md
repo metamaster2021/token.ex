@@ -2,6 +2,7 @@
 
 ## variant data field example
 
+----
 ### [amax.token.hpp](./contracts/amax.token/include/amax.token/amax.token.hpp)
 #### define variant type `token_info_ex`
 ```c++
@@ -42,6 +43,7 @@ void create( const name&   issuer,
                const asset&  maximum_supply, const token_info_ex& info_ex);
 ```
 
+----
 ### [amax.token.cpp](./contracts/amax.token/src/amax.token.cpp)
 #### implements in create() action
 ```c++
