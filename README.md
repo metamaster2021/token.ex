@@ -1,41 +1,73 @@
-# amax.contracts
+# token.ex
 
-## Version : 1.9.2
+## variant data field example
 
-The design of the AMAX blockchain calls for a number of smart contracts that are run at a privileged permission level in order to support functions such as block producer registration and voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc.  These smart contracts are referred to as the bios, system, msig, wrap (formerly known as sudo) and token contracts.
+### [amax.token.hpp](./contracts/amax.token/include/amax.token/amax.token.hpp)
+- define variant type `token_info_ex`
+```c++
+   struct amax_token_info {
+      eosio::name bank;
+      std::string full_name;
 
-This repository contains examples of these privileged contracts that are useful when deploying, managing, and/or using an AMAX blockchain.  They are provided for reference purposes:
+      EOSLIB_SERIALIZE( amax_token_info,  (bank)(full_name)  )
+   };
 
-   * [amax.bios](./contracts/amax.bios)
-   * [amax.system](./contracts/amax.system)
-   * [amax.msig](./contracts/amax.msig)
-   * [amax.wrap](./contracts/amax.wrap)
+   struct eth_token_info {
+      std::string address;
+      std::string full_name;
+      std::string memo;
+      EOSLIB_SERIALIZE( eth_token_info,  (address)(full_name)(memo)  )
+   };
 
-The following unprivileged contract(s) are also part of the system.
-   * [amax.token](./contracts/amax.token)
+   typedef std::variant<amax_token_info, eth_token_info> token_info_ex;
+```
 
-Dependencies:
-* [amax.cdt v1.0.x](https://github.com/armoniax/amax.cdt/releases/tag/v1.7.0)
-* [amax v1.0.x](https://github.com/armoniax/amaxchain/releases/tag/v1.0.0) (optional dependency only needed to build unit tests)
+- add variant field `info_ex`
+```c++
+   struct [[eosio::table]] currency_stats {
+      asset    supply;
+      asset    max_supply;
+      name     issuer;
+      token_info_ex     info_ex;
 
-## Build
+      uint64_t primary_key()const { return supply.symbol.code().raw(); }
+   };
 
-To build the contracts follow the instructions in [Build and deploy](./docs/03_build-and-deploy) section.
+```
 
-## Contributing
+- add param `info_ex` to create() action
+```c++
+[[eosio::action]]
+void create( const name&   issuer,
+               const asset&  maximum_supply, const token_info_ex& info_ex);
+```
 
-[Contributing Guide](./CONTRIBUTING.md)
+### [amax.token.cpp](./contracts/amax.token/src/amax.token.cpp)
+- implements in create() action
+```c++
+void token::create( const name&   issuer,
+                    const asset&  maximum_supply, const token_info_ex& info_ex )
+{
+    require_auth( get_self() );
 
-[Code of Conduct](./CONTRIBUTING.md#conduct)
+    check(is_account(issuer), "issuer account does not exist");
+    auto sym = maximum_supply.symbol;
+    check( sym.is_valid(), "invalid symbol name" );
+    check( maximum_supply.is_valid(), "invalid supply");
+    check( maximum_supply.amount > 0, "max-supply must be positive");
 
-## License
+    stats statstable( get_self(), sym.code().raw() );
+    auto existing = statstable.find( sym.code().raw() );
+    check( existing == statstable.end(), "token with symbol already exists" );
 
-[MIT](./LICENSE)
+    statstable.emplace( get_self(), [&]( auto& s ) {
+       s.supply.symbol = maximum_supply.symbol;
+       s.max_supply    = maximum_supply;
+       s.issuer        = issuer;
+       s.info_ex       = info_ex;
+    });
+}
+```
 
-The included icons are provided under the same terms as the software and accompanying documentation, the MIT License.  We welcome contributions from the artistically-inclined members of the community, and if you do send us alternative icons, then you are providing them under those same terms.
-
-## Important
-
-See [LICENSE](./LICENSE) for copyright and license terms.
-
-All repositories and other materials are provided subject to the terms of this [IMPORTANT](./IMPORTANT.md) notice and you must familiarize yourself with its terms.  The notice contains important information, limitations and restrictions relating to our software, publications, trademarks, third-party resources, and forward-looking statements.  By accessing any of our repositories and other materials, you accept and agree to the terms of the notice.
+### test on testnet
+- see [test.sh](./test.sh)
